@@ -1,13 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Management.Automation.Provider;
 using Octokit;
 using System.IO;
 using System.Management.Automation;
 using System.Collections.ObjectModel;
+using Octokit.Internal;
+using Octokit.Caching;
+using System.Runtime.Serialization;
 
 namespace GithubProvider
 {
@@ -40,9 +42,16 @@ namespace GithubProvider
             return new List<PathInfo>();
         }
 
-        public virtual System.IO.FileInfo AsObject()
+        public virtual object AsObject()
         {
-            return new System.IO.FileInfo(VirtualPath);
+            if (Type == PathType.File)
+            {
+                return new System.IO.FileInfo(VirtualPath); //These types seem to print right, it's odd.
+            }
+            else
+            {
+                return new System.IO.DirectoryInfo(VirtualPath);
+            }
         }
 
         public virtual string VirtualPath { get; protected set; }
@@ -268,8 +277,13 @@ namespace GithubProvider
         private static GitHubClient _client;
         private static GitHubClient makeClient()
         {
-            var client = new GitHubClient(new ProductHeaderValue("GithubPSProvider"));
-            client.Credentials = new Credentials(Environment.GetEnvironmentVariable("GITHUB_TOKEN"));
+            var connection = new Connection(
+                new ProductHeaderValue("GithubPSProvider", "0.0.1"),
+                GitHubClient.GitHubApiUrl,
+                new InMemoryCredentialStore(new Credentials(Environment.GetEnvironmentVariable("GITHUB_TOKEN"))),
+                new CachingHttpClient(new HttpClientAdapter(), new NaiveInMemoryCache()),
+                new SimpleJsonSerializer());
+            var client = new GitHubClient(connection);
             return client;
         }
         public static GitHubClient Client
