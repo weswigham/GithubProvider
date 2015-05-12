@@ -191,7 +191,7 @@ namespace GithubProvider
                     default:
                         return null;
                 }
-            }).Where((o) => o != null);
+            }).Where((o) => o != null && o.VirtualPath == Path.Combine(Org, Name, o.Name));
         }
     }
 
@@ -199,12 +199,25 @@ namespace GithubProvider
     {
         public FilesystemInfo(string org, string repo, string path)
         {
-            VirtualPath = Path.Combine(org, repo, path);
+            Org = org;
+            Repo = repo;
             FilePath = path;
             Name = Path.GetFileName(path);
         }
 
         public string FilePath { get; set; }
+
+        public string Org { get; set; }
+
+        public string Repo { get; set; }
+
+        public override string VirtualPath
+        {
+            get
+            {
+                return Path.Combine(Org, Repo, FilePath);
+            }
+        }
     }
 
     internal class FolderInfo : FilesystemInfo
@@ -212,6 +225,30 @@ namespace GithubProvider
         public FolderInfo(string org, string repo, string path) : base(org, repo, path)
         {
             Type = PathType.Folder;
+        }
+
+        public override async Task<IEnumerable<PathInfo>> Children()
+        {
+            var repo = await GithubProvider.Client.Repository.Get(Org, Repo);
+            var defaultBranch = await GithubProvider.Client.Repository.GetBranch(Org, Repo, repo.DefaultBranch);
+
+            var tree = await GithubProvider.Client.GitDatabase.Tree.GetRecursive(Org, Repo, defaultBranch.Commit.Sha);
+            if (tree.Truncated)
+            {
+                throw new Exception("Repo too big.");
+            }
+            return tree.Tree.Select<TreeItem, PathInfo>((item) =>
+            {
+                switch (item.Type)
+                {
+                    case TreeType.Blob:
+                        return new FileInfo(Org, Repo, item.Path);
+                    case TreeType.Tree:
+                        return new FolderInfo(Org, Repo, item.Path);
+                    default:
+                        return null;
+                }
+            }).Where((o) => o != null && o.VirtualPath == Path.Combine(VirtualPath, o.Name));
         }
     }
 
@@ -312,6 +349,10 @@ namespace GithubProvider
         protected override string GetChildName(string path)
         {
             var info = PathInfo.FromFSPath(path).Resolve();
+            if (info == null)
+            {
+                return null;
+            }
             return info.Name;
         }
 
