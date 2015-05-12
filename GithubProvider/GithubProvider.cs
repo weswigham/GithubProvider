@@ -50,6 +50,10 @@ namespace GithubProvider
             }
             else
             {
+                if (string.IsNullOrEmpty(VirtualPath))
+                {
+                    return new System.IO.DirectoryInfo(Path.DirectorySeparatorChar.ToString());
+                }
                 return new System.IO.DirectoryInfo(VirtualPath);
             }
         }
@@ -307,12 +311,18 @@ namespace GithubProvider
 
         public IContentReader GetContentReader(string path)
         {
-            throw new NotImplementedException();
+            var info = PathInfo.FromFSPath(path).Resolve();
+            if (info.Type == PathType.File) {
+                var fileInfo = info as FileInfo;
+                var content = Client.Repository.Content.GetAllContents(fileInfo.Org, fileInfo.Repo, fileInfo.FilePath).Resolve().FirstOrDefault();
+                return new HttpFileReader(content.DownloadUrl);
+            }
+            return null;
         }
 
         public object GetContentReaderDynamicParameters(string path)
         {
-            throw new NotImplementedException();
+            return null;
         }
 
         public IContentWriter GetContentWriter(string path)
@@ -328,6 +338,12 @@ namespace GithubProvider
         protected override bool IsValidPath(string path)
         {
             return ItemExists(path);
+        }
+
+        protected override void GetItem(string path)
+        {
+            var info = PathInfo.FromFSPath(path).Resolve();
+            WriteItemObject(info.AsObject(), info.VirtualPath, info.Type != PathType.File);
         }
 
         protected override bool IsItemContainer(string path)
@@ -350,7 +366,8 @@ namespace GithubProvider
                 return;
             }
 
-            foreach (var child in info.Children().Resolve())
+            var children = info.Children().Resolve();
+            foreach (var child in children)
             {
                 if (recurse)
                 {
@@ -399,7 +416,8 @@ namespace GithubProvider
                 return;
             }
 
-            foreach (var child in info.Children().Resolve())
+            var children = info.Children().Resolve();
+            foreach (var child in children)
             {
                 WriteItemObject(child.Name, child.VirtualPath, child.Type != PathType.File);
             }
