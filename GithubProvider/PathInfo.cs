@@ -327,7 +327,13 @@ namespace GithubProvider
         public override async Task<IEnumerable<PathInfo>> Children()
         {
             var repo = await GithubProvider.Client.Repository.Get(Org, Name);
-            var defaultBranch = await GithubProvider.Client.Repository.GetBranch(Org, Name, repo.DefaultBranch);
+            Branch defaultBranch;
+            try {
+                defaultBranch = await GithubProvider.Client.Repository.GetBranch(Org, Name, repo.DefaultBranch);
+            } catch (Octokit.NotFoundException)
+            { //Empty uninitialized repo
+                return new List<PathInfo>();
+            }
 
             var tree = await GithubProvider.Client.GitDatabase.Tree.Get(Org, Name, defaultBranch.Commit.Sha);
             if (tree.Truncated)

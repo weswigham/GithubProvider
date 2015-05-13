@@ -12,5 +12,10 @@ namespace GithubProvider
         {
             return task.GetAwaiter().GetResult();
         }
+
+        public static void Resolve(this Task task)
+        {
+            task.GetAwaiter().GetResult();
+        }
     }
 }

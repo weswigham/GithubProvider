@@ -57,6 +57,7 @@
     <Compile Include="GithubDriveInfo.cs" />
     <Compile Include="GithubProvider.cs" />
     <Compile Include="HttpFileReader.cs" />
+    <Compile Include="HttpFileWriter.cs" />
     <Compile Include="PathInfo.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
