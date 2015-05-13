@@ -59,19 +59,42 @@ namespace GithubProvider
                 return PathInfoCache.Get(path) as PathInfo;
             }
             var sections = string.IsNullOrWhiteSpace(path) ? new string[] { } : path.Split(Path.DirectorySeparatorChar);
-            foreach (var elem in sections)
+            foreach (var elem in sections.Take(sections.Length - 1))
             {
                 if (string.IsNullOrWhiteSpace(elem))
                 {
                     return null;
                 }
             }
+            if (sections.Length == 0)
+            {
+                if (PathInfoCache.Contains(""))
+                {
+                    return PathInfoCache.Get("") as PathInfo;
+                } else
+                {
+                    PathInfoCache[""] = new RootInfo();
+                    return PathInfoCache.Get("") as PathInfo;
+                }
+            }
+            if (string.IsNullOrWhiteSpace(sections[sections.Length - 1]))
+            {
+                //drop tailing slash
+                sections = sections.Take(sections.Length - 1).ToArray();
+            }
             switch (sections.Length)
             {
-                case 0: //this probably isn't possible
+                case 0:
                     {
-                        PathInfoCache[""] = new RootInfo();
-                        return PathInfoCache.Get("") as PathInfo;
+                        if (PathInfoCache.Contains(""))
+                        {
+                            return PathInfoCache.Get("") as PathInfo;
+                        }
+                        else
+                        {
+                            PathInfoCache[""] = new RootInfo();
+                            return PathInfoCache.Get("") as PathInfo;
+                        }
                     }
                 case 1:
                     {

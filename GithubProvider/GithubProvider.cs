@@ -116,12 +116,8 @@ namespace GithubProvider
 
         protected override string GetChildName(string path)
         {
-            var info = PathInfo.FromFSPath(path).Resolve();
-            if (info == null)
-            {
-                return null;
-            }
-            return info.Name;
+            return path.LastIndexOf(Path.DirectorySeparatorChar) >= 0 ?
+                path.Substring(path.LastIndexOf(Path.DirectorySeparatorChar)+1) : path;
         }
 
         protected override string GetParentPath(string path, string root)
@@ -130,7 +126,7 @@ namespace GithubProvider
             // the root. If not nothing should be returned
             if (!String.IsNullOrEmpty(root))
             {
-                if (!path.Contains(root))
+                if (!path.StartsWith(root))
                 {
                     return null;
                 }
