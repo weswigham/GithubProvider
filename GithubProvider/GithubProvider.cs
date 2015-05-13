@@ -8,6 +8,7 @@ using System.Management.Automation;
 using System.Collections.ObjectModel;
 using Octokit.Internal;
 using Octokit.Caching;
+using System.Collections.Generic;
 
 namespace GithubProvider
 {
@@ -83,6 +84,72 @@ namespace GithubProvider
             WriteItemObject(info.AsObject(), info.VirtualPath, info.Type != PathType.File);
         }
 
+        protected Dictionary<string, Func<string, object, Task<object>>> itemCreationHandlers
+            = new Dictionary<string, Func<string, object, Task<object>>>() {
+                { "Directory", async (path, input) =>
+                {
+                    var folder = PathInfo.UncheckedFolderFromPath(path);
+                    if (folder == null)
+                    {
+                        var repoInfo = PathInfo.UncheckedRepoFromPath(path);
+                        if (repoInfo == null)
+                        {
+                            throw new NotSupportedException("The Github Provider does not support making directories in this location.");
+                        }
+                        if (await repoInfo.Exists())
+                        {
+                            throw new Exception("The given repository already exists."); //TODO: Custom exceptions
+                        }
+                        var parentInfo = await PathInfo.FromFSPath(GithubProvider.StaticGetParentPath(path, null));
+                        if (parentInfo != null)
+                        {
+                            var repo = new NewRepository(repoInfo.Name) { AutoInit = true };
+                            switch(parentInfo.Type)
+                            {
+                                case (PathType.User):
+                                    {
+                                        await GithubProvider.Client.Repository.Create(repo);
+                                        return repoInfo;
+                                    }
+                                case (PathType.Org):
+                                    {
+                                        await GithubProvider.Client.Repository.Create(repoInfo.Org, repo);
+                                        return repoInfo;
+                                    }
+                                default:
+                                    throw new Exception("Given path is neither a repository nor a folder and cannot be created."); //TODO
+                            }
+                        }
+                        
+                    }
+                    if (await folder.Exists())
+                    {
+                        throw new Exception("The folder being created already exists"); //TODO: Stop being lazy and write my own exceptions
+                    }
+                    await GithubProvider.Client.Repository.Content.CreateFile(
+                        folder.Org,
+                        folder.Name,
+                        Path.Combine(folder.FilePath, ".gitkeep"),
+                        new CreateFileRequest("Add .gitkeep", "")
+                    );
+                    return folder;
+                } }
+            };
+
+        protected override void NewItem(string path, string itemTypeName, object newItemValue)
+        {
+            if (!itemCreationHandlers.ContainsKey(itemTypeName))
+            {
+                throw new NotSupportedException("The Github Provider does not know how to make that object!");
+            }
+            var item = itemCreationHandlers[itemTypeName](path, newItemValue).Resolve();
+            if (item != null)
+            {
+                PathInfo.PathInfoCache.Remove(GetParentPath(path, null)); //invalidate cache of parent object
+                WriteItemObject(item, path, /*???*/ false);
+            }
+        }
+
         protected override bool IsItemContainer(string path)
         {
             var info = PathInfo.FromFSPath(path).Resolve();
@@ -120,7 +187,7 @@ namespace GithubProvider
                 path.Substring(path.LastIndexOf(Path.DirectorySeparatorChar)+1) : path;
         }
 
-        protected override string GetParentPath(string path, string root)
+        protected static string StaticGetParentPath(string path, string root)
         {
             // If root is specified then the path has to contain
             // the root. If not nothing should be returned
@@ -134,6 +201,11 @@ namespace GithubProvider
 
             var index = path.LastIndexOf(Path.DirectorySeparatorChar) >= 0 ? path.LastIndexOf(Path.DirectorySeparatorChar) : 0;
             return path.Substring(0, index);
+        }
+
+        protected override string GetParentPath(string path, string root)
+        {
+            return GithubProvider.StaticGetParentPath(path, root);
         }
 
         protected override string MakePath(string parent, string child)

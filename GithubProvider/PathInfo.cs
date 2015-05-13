@@ -32,6 +32,11 @@ namespace GithubProvider
             return Task.FromResult<IEnumerable<PathInfo>>(new List<PathInfo>());
         }
 
+        public virtual Task<bool> Exists()
+        {
+            return Task.FromResult(false);
+        }
+
         public virtual object AsObject()
         {
             if (Type == PathType.File)
@@ -52,38 +57,85 @@ namespace GithubProvider
 
         public static MemoryCache PathInfoCache = new MemoryCache("GithubPSProvider");
 
-        public static async Task<PathInfo> FromFSPath(string path)
+        private static int parsePathIntoParts(string path, out string[] parts)
         {
-            if (PathInfoCache.Contains(path))
-            {
-                return PathInfoCache.Get(path) as PathInfo;
-            }
             var sections = string.IsNullOrWhiteSpace(path) ? new string[] { } : path.Split(Path.DirectorySeparatorChar);
             foreach (var elem in sections.Take(sections.Length - 1))
             {
                 if (string.IsNullOrWhiteSpace(elem))
                 {
-                    return null;
+                    parts = new string[] { };
+                    return -1;
                 }
             }
             if (sections.Length == 0)
             {
-                if (PathInfoCache.Contains(""))
-                {
-                    return PathInfoCache.Get("") as PathInfo;
-                } else
-                {
-                    PathInfoCache[""] = new RootInfo();
-                    return PathInfoCache.Get("") as PathInfo;
-                }
+                parts = sections;
+                return 0;
             }
             if (string.IsNullOrWhiteSpace(sections[sections.Length - 1]))
             {
                 //drop tailing slash
                 sections = sections.Take(sections.Length - 1).ToArray();
             }
-            switch (sections.Length)
+            parts = sections;
+            return sections.Length;
+        }
+
+        public static UserInfo UncheckedUserFromPath(string path)
+        {
+            string[] sections;
+            var sectionCount = parsePathIntoParts(path, out sections);
+            if (sectionCount != 1) return null;
+            return new UserInfo(sections[0]);
+        }
+
+        public static OrgInfo UncheckedOrgFromPath(string path)
+        {
+            string[] sections;
+            var sectionCount = parsePathIntoParts(path, out sections);
+            if (sectionCount != 1) return null;
+            return new OrgInfo(sections[0]);
+        }
+
+        public static RepoInfo UncheckedRepoFromPath(string path)
+        {
+            string[] sections;
+            var sectionCount = parsePathIntoParts(path, out sections);
+            if (sectionCount != 2) return null;
+            return new RepoInfo(sections[0], sections[1]);
+        }
+
+        public static FileInfo UncheckedFileFromPath(string path)
+        {
+            string[] sections;
+            var sectionCount = parsePathIntoParts(path, out sections);
+            if (sectionCount <= 2) return null;
+            var filepath = Path.Combine(sections.Skip(2).Take(sections.Length - 2).ToArray());
+            return new FileInfo(sections[0], sections[1], filepath, null);
+        }
+
+        public static FolderInfo UncheckedFolderFromPath(string path)
+        {
+            string[] sections;
+            var sectionCount = parsePathIntoParts(path, out sections);
+            if (sectionCount <= 2) return null;
+            var filepath = Path.Combine(sections.Skip(2).Take(sections.Length - 2).ToArray());
+            return new FolderInfo(sections[0], sections[1], filepath, null);
+        }
+
+        public static async Task<PathInfo> FromFSPath(string path)
+        {
+            if (PathInfoCache.Contains(path))
             {
+                return PathInfoCache.Get(path) as PathInfo;
+            }
+            string[] sections;
+            var sectionCount = parsePathIntoParts(path, out sections);
+            switch (sectionCount)
+            {
+                case -1:
+                    return null;
                 case 0:
                     {
                         if (PathInfoCache.Contains(""))
@@ -98,98 +150,37 @@ namespace GithubProvider
                     }
                 case 1:
                     {
-                        try
+                        var org = new OrgInfo(sections[0]);
+                        if (await org.Exists())
                         {
-                            var org = await GithubProvider.Client.Organization.Get(sections[0]);
-                            if (org != null)
-                            {
-                                PathInfoCache[path] = new OrgInfo(sections[0]);
-                            }
+                            return org;
                         }
-                        catch (Octokit.NotFoundException)
+                        var user = new UserInfo(sections[0]);
+                        if (await user.Exists())
                         {
+                            return user;
                         }
-                        try
-                        {
-                            var user = await GithubProvider.Client.User.Get(sections[0]);
-                            if (user != null)
-                            {
-                                PathInfoCache[path] = new UserInfo(user.Login);
-                            }
-                        }
-                        catch (Octokit.NotFoundException)
-                        {
-                        }
-                        if (PathInfoCache.Contains(path))
-                        {
-                            return PathInfoCache.Get(path) as PathInfo;
-                        }
-                        else
-                        {
-                            return null;
-                        }
+                        return null;
                     }
                 case 2:
                     {
-                        try
-                        {
-                            var repo = await GithubProvider.Client.Repository.Get(sections[0], sections[1]);
-                            if (repo == null)
-                            {
-                                return null;
-                            }
-                            PathInfoCache[path] = new RepoInfo(sections[0], sections[1]);
-                        }
-                        catch (Octokit.NotFoundException)
-                        {
-                        }
-                        if (PathInfoCache.Contains(path))
-                        {
-                            return PathInfoCache.Get(path) as PathInfo;
-                        }
-                        else
-                        {
-                            return null;
-                        }
+                        var repo = new RepoInfo(sections[0], sections[1]);
+                        return await repo.Exists() ? repo : null;
                     }
                 default:
                     {
-                        try
+                        var filepath = Path.Combine(sections.Skip(2).Take(sections.Length - 2).ToArray());
+                        var folder = new FolderInfo(sections[0], sections[1], filepath, null);
+                        if (await folder.Exists())
                         {
-                            var repo = await GithubProvider.Client.Repository.Get(sections[0], sections[1]);
-                            var defaultBranch = await GithubProvider.Client.Repository.GetBranch(sections[0], sections[1], repo.DefaultBranch);
-                            var filepath = Path.Combine(sections.Skip(2).Take(sections.Length - 2).ToArray());
-                            var files = await GithubProvider.Client.GitDatabase.Tree.GetRecursive(sections[0], sections[1], defaultBranch.Commit.Sha);
-                            if (files.Tree.Count > 0)
-                            {
-                                foreach (var file in files.Tree)
-                                {
-                                    if (file.Path.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar) == filepath)
-                                    {
-                                        if (file.Type == TreeType.Blob)
-                                        {
-                                            PathInfoCache[path] = new FileInfo(sections[0], sections[1], filepath, file.Sha);
-                                        }
-                                        else
-                                        {
-                                            PathInfoCache[path] = new FolderInfo(sections[0], sections[1], filepath, file.Sha);
-                                        }
-                                        break;
-                                    }
-                                }
-                            }
+                            return folder;
                         }
-                        catch (Octokit.NotFoundException)
+                        var file = new FileInfo(sections[0], sections[1], filepath, null);
+                        if (await file.Exists())
                         {
+                            return file;
                         }
-                        if (PathInfoCache.Contains(path))
-                        {
-                            return PathInfoCache.Get(path) as PathInfo;
-                        }
-                        else
-                        {
-                            return null;
-                        }
+                        return null;
                     }
             }
         }
@@ -209,6 +200,11 @@ namespace GithubProvider
             {
                 return "";
             }
+        }
+
+        public override Task<bool> Exists()
+        {
+            return Task.FromResult(true);
         }
 
         public override async Task<IEnumerable<PathInfo>> Children()
@@ -253,6 +249,23 @@ namespace GithubProvider
             }
             return items;
         }
+
+        public override async Task<bool> Exists()
+        {
+            try
+            {
+                var user = await GithubProvider.Client.User.Get(Name);
+                if (user != null)
+                {
+                    PathInfoCache[Name] = this;
+                    return true;
+                }
+            }
+            catch (Octokit.NotFoundException)
+            {
+            }
+            return false;
+        }
     }
 
     internal class OrgInfo : RepoCollectionInfo
@@ -271,6 +284,23 @@ namespace GithubProvider
                 PathInfoCache[item.VirtualPath] = item;
             }
             return items;
+        }
+
+        public override async Task<bool> Exists()
+        {
+            try
+            {
+                var org = await GithubProvider.Client.Organization.Get(Name);
+                if (org != null)
+                {
+                    PathInfoCache[Name] = this;
+                    return true;
+                }
+            }
+            catch (Octokit.NotFoundException)
+            {
+            }
+            return false;
         }
     }
 
@@ -322,6 +352,22 @@ namespace GithubProvider
             }
             return items;
         }
+
+        public override async Task<bool> Exists()
+        {
+            try
+            {
+                var repo = await GithubProvider.Client.Repository.Get(Org, Name);
+                if (repo != null)
+                {
+                    PathInfoCache[VirtualPath] = this;
+                    return true;
+                }
+            } catch (Octokit.NotFoundException)
+            {
+            }
+            return false;
+        }
     }
 
     internal abstract class FilesystemInfo : PathInfo
@@ -334,17 +380,13 @@ namespace GithubProvider
             Sha = sha;
             Name = Path.GetFileName(path);
         }
-
-        [ValidateNotNullOrEmpty]
+        
         public string FilePath { get; private set; }
-
-        [ValidateNotNullOrEmpty]
+        
         public string Org { get; private set; }
-
-        [ValidateNotNullOrEmpty]
+        
         public string Repo { get; private set; }
-
-        [ValidateNotNullOrEmpty]
+        
         public string Sha { get; private set; }
 
         public override string VirtualPath
@@ -353,6 +395,51 @@ namespace GithubProvider
             {
                 return Path.Combine(Org, Repo, FilePath);
             }
+        }
+
+        public override async Task<bool> Exists()
+        {
+            try
+            {
+                if (Sha != null)
+                {
+                    if (Type == PathType.Folder)
+                    {
+                        return await GithubProvider.Client.GitDatabase.Tree.Get(Org, Repo, Sha) != null;
+                    }
+                    else
+                    {
+                        return await GithubProvider.Client.GitDatabase.Blob.Get(Org, Repo, Sha) != null;
+                    }
+                }
+
+                //Otherwise lookup the sha
+                var repo = await GithubProvider.Client.Repository.Get(Org, Repo);
+                var defaultBranch = await GithubProvider.Client.Repository.GetBranch(Org, Repo, repo.DefaultBranch);
+                var filepath = FilePath;
+                var files = await GithubProvider.Client.GitDatabase.Tree.GetRecursive(Org, Repo, defaultBranch.Commit.Sha);
+                if (files.Tree.Count > 0)
+                {
+                    foreach (var file in files.Tree)
+                    {
+                        if (file.Path.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar) == filepath)
+                        {
+                            if ((file.Type == TreeType.Blob && Type == PathType.File)
+                                ||
+                                (file.Type == TreeType.Tree && Type == PathType.Folder))
+                            {
+                                Sha = file.Sha;
+                                PathInfoCache[VirtualPath] = this;
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Octokit.NotFoundException)
+            {
+            }
+            return false;
         }
     }
 
