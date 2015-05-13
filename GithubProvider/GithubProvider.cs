@@ -10,6 +10,8 @@ using System.Collections.ObjectModel;
 using Octokit.Internal;
 using Octokit.Caching;
 using System.Runtime.Serialization;
+using System.Diagnostics.Contracts;
+using System.Collections.Concurrent;
 
 namespace GithubProvider
 {
@@ -23,6 +25,7 @@ namespace GithubProvider
 
     internal enum PathType
     {
+        Invalid,
         Root,
         User,
         Org,
@@ -33,13 +36,14 @@ namespace GithubProvider
 
     internal abstract class PathInfo
     {
-        public PathType Type {get; set;}
+        public PathType Type { get; set; } = PathType.Invalid;
 
+        [ValidateNotNullOrEmpty]
         public string Name { get; set; }
 
-        public virtual async Task<IEnumerable<PathInfo>> Children()
+        public virtual Task<IEnumerable<PathInfo>> Children()
         {
-            return new List<PathInfo>();
+            return Task.FromResult<IEnumerable<PathInfo>>(new List<PathInfo>());
         }
 
         public virtual object AsObject()
@@ -60,41 +64,99 @@ namespace GithubProvider
 
         public virtual string VirtualPath { get; protected set; }
 
+        public static ConcurrentDictionary<string, PathInfo> PathInfoCache = new ConcurrentDictionary<string, PathInfo>();
+
         public static async Task<PathInfo> FromFSPath(string path)
         {
-            var sections = String.IsNullOrWhiteSpace(path) ? new string[] { } : path.Split(Path.DirectorySeparatorChar);
+            PathInfo cached;
+            if (PathInfoCache.TryGetValue(path, out cached))
+            {
+                return cached;
+            }
+            var sections = string.IsNullOrWhiteSpace(path) ? new string[] { } : path.Split(Path.DirectorySeparatorChar);
             switch (sections.Length)
             {
                 case 0: //this probably isn't possible
                     {
-                        return new RootInfo();
+                        PathInfoCache[""] = new RootInfo();
+                        return PathInfoCache[""];
                     }
                 case 1:
                     {
-                        return (await new RootInfo().Children()).Where((child) => (child as RepoCollectionInfo).Name == sections[0]).FirstOrDefault();
+                        try
+                        {
+                            var org = await GithubProvider.Client.Organization.Get(sections[0]);
+                            if (org != null)
+                            {
+                                PathInfoCache[path] = new OrgInfo(sections[0]);
+                            }
+                        }
+                        catch (Octokit.NotFoundException)
+                        {
+                        }
+                        try
+                        {
+                            var user = await GithubProvider.Client.User.Get(sections[0]);
+                            if (user != null)
+                            {
+                                PathInfoCache[path] = new UserInfo(user.Login);
+                            }
+                        }
+                        catch (Octokit.NotFoundException)
+                        {
+                        }
+                        PathInfoCache.TryGetValue(path, out cached);
+                        return cached;
                     }
                 case 2:
                     {
-                        return (await (await FromFSPath(sections[0])).Children()).Where((child) => (child as RepoInfo).Name == sections[1]).FirstOrDefault();
+                        try
+                        {
+                            var repo = await GithubProvider.Client.Repository.Get(sections[0], sections[1]);
+                            if (repo == null)
+                            {
+                                return null;
+                            }
+                            PathInfoCache[path] = new RepoInfo(sections[0], sections[1]);
+                        }
+                        catch (Octokit.NotFoundException)
+                        {
+                        }
+                        PathInfoCache.TryGetValue(path, out cached);
+                        return cached;
                     }
                 default:
                     {
-                        return (await (await FromFSPath(
-                                    String.Join(
-                                        Path.DirectorySeparatorChar.ToString(), 
-                                        sections.Take(2)
-                                    )
-                                )).Children())
-                            .Where(
-                                (child) => 
-                                    (child as FilesystemInfo).FilePath 
-                                    == 
-                                    String.Join(
-                                        Path.DirectorySeparatorChar.ToString(), 
-                                        sections.Skip(2).Take(sections.Length - 2)
-                                    )
-                            )
-                            .FirstOrDefault();
+                        try
+                        {
+                            var repo = await GithubProvider.Client.Repository.Get(sections[0], sections[1]);
+                            var defaultBranch = await GithubProvider.Client.Repository.GetBranch(sections[0], sections[1], repo.DefaultBranch);
+                            var filepath = Path.Combine(sections.Skip(2).Take(sections.Length - 2).ToArray());
+                            var files = await GithubProvider.Client.GitDatabase.Tree.GetRecursive(sections[0], sections[1], defaultBranch.Commit.Sha);
+                            if (files.Tree.Count > 0)
+                            {
+                                foreach (var file in files.Tree)
+                                {
+                                    if (file.Path == filepath)
+                                    {
+                                        if (file.Type == TreeType.Blob)
+                                        {
+                                            PathInfoCache[path] = new FileInfo(sections[0], sections[1], filepath, file.Sha);
+                                        }
+                                        else
+                                        {
+                                            PathInfoCache[path] = new FolderInfo(sections[0], sections[1], filepath, file.Sha);
+                                        }
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        catch (Octokit.NotFoundException)
+                        {
+                        }
+                        PathInfoCache.TryGetValue(path, out cached);
+                        return cached;
                     }
             }
         }
@@ -122,7 +184,12 @@ namespace GithubProvider
             var username = user.Login;
             var orgs = await GithubProvider.Client.Organization.GetAllForCurrent();
             var orgInfos = orgs.Select((org) => new OrgInfo(org.Login));
-            return orgInfos.Concat(new List<PathInfo>() { new UserInfo(username) });
+            var items = orgInfos.Concat(new List<PathInfo>() { new UserInfo(username) });
+            foreach (var item in items)
+            {
+                PathInfoCache[item.VirtualPath] = item;
+            }
+            return items;
         }
     }
 
@@ -145,8 +212,13 @@ namespace GithubProvider
 
         public override async Task<IEnumerable<PathInfo>> Children()
         {
-            var repos = await GithubProvider.Client.Repository.GetAllForCurrent();
-            return repos.Select((repo) => new RepoInfo(Name, repo.Name));
+            var repos = await GithubProvider.Client.Repository.GetAllForUser(Name);
+            var items = repos.Select((repo) => new RepoInfo(Name, repo.Name));
+            foreach (var item in items)
+            {
+                PathInfoCache[item.VirtualPath] = item;
+            }
+            return items;
         }
     }
 
@@ -160,7 +232,12 @@ namespace GithubProvider
         public override async Task<IEnumerable<PathInfo>> Children()
         {
             var repos = await GithubProvider.Client.Repository.GetAllForOrg(Name);
-            return repos.Select((repo) => new RepoInfo(Name, repo.Name));
+            var items = repos.Select((repo) => new RepoInfo(Name, repo.Name));
+            foreach (var item in items)
+            {
+                PathInfoCache[item.VirtualPath] = item;
+            }
+            return items;
         }
     }
 
@@ -173,6 +250,7 @@ namespace GithubProvider
             Type = PathType.Repo;
         }
 
+        [ValidateNotNullOrEmpty]
         public string Org { get; set; }
 
         public override string VirtualPath
@@ -188,41 +266,53 @@ namespace GithubProvider
             var repo = await GithubProvider.Client.Repository.Get(Org, Name);
             var defaultBranch = await GithubProvider.Client.Repository.GetBranch(Org, Name, repo.DefaultBranch);
 
-            var tree = await GithubProvider.Client.GitDatabase.Tree.GetRecursive(Org, Name, defaultBranch.Commit.Sha);
+            var tree = await GithubProvider.Client.GitDatabase.Tree.Get(Org, Name, defaultBranch.Commit.Sha);
             if (tree.Truncated)
             {
                 throw new Exception("Repo too big.");
             }
-            return tree.Tree.Select<TreeItem, PathInfo>((item) =>
+            var items = tree.Tree.Select<TreeItem, PathInfo>((item) =>
             {
                 switch (item.Type)
                 {
                     case TreeType.Blob:
-                        return new FileInfo(Org, Name, item.Path);
+                        return new FileInfo(Org, Name, item.Path, item.Sha);
                     case TreeType.Tree:
-                        return new FolderInfo(Org, Name, item.Path);
+                        return new FolderInfo(Org, Name, item.Path, item.Sha);
                     default:
                         return null;
                 }
-            }).Where((o) => o != null && o.VirtualPath == Path.Combine(Org, Name, o.Name));
+            }).Where((o) => o != null);
+            foreach (var item in items)
+            {
+                PathInfoCache[item.VirtualPath] = item;
+            }
+            return items;
         }
     }
 
     internal abstract class FilesystemInfo : PathInfo
     {
-        public FilesystemInfo(string org, string repo, string path)
+        public FilesystemInfo(string org, string repo, string path, string sha)
         {
             Org = org;
             Repo = repo;
             FilePath = path;
+            Sha = sha;
             Name = Path.GetFileName(path);
         }
 
-        public string FilePath { get; set; }
+        [ValidateNotNullOrEmpty]
+        public string FilePath { get; private set; }
 
-        public string Org { get; set; }
+        [ValidateNotNullOrEmpty]
+        public string Org { get; private set; }
 
-        public string Repo { get; set; }
+        [ValidateNotNullOrEmpty]
+        public string Repo { get; private set; }
+
+        [ValidateNotNullOrEmpty]
+        public string Sha { get; private set; }
 
         public override string VirtualPath
         {
@@ -235,39 +325,41 @@ namespace GithubProvider
 
     internal class FolderInfo : FilesystemInfo
     {
-        public FolderInfo(string org, string repo, string path) : base(org, repo, path)
+        public FolderInfo(string org, string repo, string path, string sha) : base(org, repo, path, sha)
         {
             Type = PathType.Folder;
         }
 
         public override async Task<IEnumerable<PathInfo>> Children()
         {
-            var repo = await GithubProvider.Client.Repository.Get(Org, Repo);
-            var defaultBranch = await GithubProvider.Client.Repository.GetBranch(Org, Repo, repo.DefaultBranch);
-
-            var tree = await GithubProvider.Client.GitDatabase.Tree.GetRecursive(Org, Repo, defaultBranch.Commit.Sha);
+            var tree = await GithubProvider.Client.GitDatabase.Tree.Get(Org, Repo, Sha);
             if (tree.Truncated)
             {
                 throw new Exception("Repo too big.");
             }
-            return tree.Tree.Select<TreeItem, PathInfo>((item) =>
+            var items = tree.Tree.Select<TreeItem, PathInfo>((item) =>
             {
                 switch (item.Type)
                 {
                     case TreeType.Blob:
-                        return new FileInfo(Org, Repo, item.Path);
+                        return new FileInfo(Org, Repo, item.Path, item.Sha);
                     case TreeType.Tree:
-                        return new FolderInfo(Org, Repo, item.Path);
+                        return new FolderInfo(Org, Repo, item.Path, item.Sha);
                     default:
                         return null;
                 }
-            }).Where((o) => o != null && o.VirtualPath == Path.Combine(VirtualPath, o.Name));
+            }).Where((o) => o != null);
+            foreach (var item in items)
+            {
+                PathInfoCache[item.VirtualPath] = item;
+            }
+            return items;
         }
     }
 
     internal class FileInfo : FilesystemInfo
     {
-        public FileInfo(string org, string repo, string path) : base(org, repo, path)
+        public FileInfo(string org, string repo, string path, string sha) : base(org, repo, path, sha)
         {
             Type = PathType.File;
         }
@@ -312,7 +404,8 @@ namespace GithubProvider
         public IContentReader GetContentReader(string path)
         {
             var info = PathInfo.FromFSPath(path).Resolve();
-            if (info.Type == PathType.File) {
+            if (info.Type == PathType.File)
+            {
                 var fileInfo = info as FileInfo;
                 var content = Client.Repository.Content.GetAllContents(fileInfo.Org, fileInfo.Repo, fileInfo.FilePath).Resolve().FirstOrDefault();
                 return new HttpFileReader(content.DownloadUrl);
@@ -337,7 +430,7 @@ namespace GithubProvider
 
         protected override bool IsValidPath(string path)
         {
-            return ItemExists(path);
+            return true; //I unno
         }
 
         protected override void GetItem(string path)
@@ -455,7 +548,7 @@ namespace GithubProvider
         {
             var drives = new Collection<PSDriveInfo>();
             drives.Add(NewDrive(new PSDriveInfo(
-                "GH", 
+                "GH",
                 ProviderInfo,
                 "",
                 "drive to access github",

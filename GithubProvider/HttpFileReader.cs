@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace GithubProvider
 {
-    public class HttpFileReader : IContentReader
+    public sealed class HttpFileReader : IContentReader
     {
         private WebClient client;
         private Uri location;
