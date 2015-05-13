@@ -9,9 +9,8 @@ using System.Management.Automation;
 using System.Collections.ObjectModel;
 using Octokit.Internal;
 using Octokit.Caching;
-using System.Runtime.Serialization;
-using System.Diagnostics.Contracts;
 using System.Collections.Concurrent;
+using System.Runtime.Caching;
 
 namespace GithubProvider
 {
@@ -64,22 +63,28 @@ namespace GithubProvider
 
         public virtual string VirtualPath { get; protected set; }
 
-        public static ConcurrentDictionary<string, PathInfo> PathInfoCache = new ConcurrentDictionary<string, PathInfo>();
+        public static MemoryCache PathInfoCache = new MemoryCache("GithubPSProvider");
 
         public static async Task<PathInfo> FromFSPath(string path)
         {
-            PathInfo cached;
-            if (PathInfoCache.TryGetValue(path, out cached))
+            if (PathInfoCache.Contains(path))
             {
-                return cached;
+                return PathInfoCache.Get(path) as PathInfo;
             }
             var sections = string.IsNullOrWhiteSpace(path) ? new string[] { } : path.Split(Path.DirectorySeparatorChar);
+            foreach (var elem in sections)
+            {
+                if (string.IsNullOrWhiteSpace(elem))
+                {
+                    return null;
+                }
+            }
             switch (sections.Length)
             {
                 case 0: //this probably isn't possible
                     {
                         PathInfoCache[""] = new RootInfo();
-                        return PathInfoCache[""];
+                        return PathInfoCache.Get("") as PathInfo;
                     }
                 case 1:
                     {
@@ -105,8 +110,13 @@ namespace GithubProvider
                         catch (Octokit.NotFoundException)
                         {
                         }
-                        PathInfoCache.TryGetValue(path, out cached);
-                        return cached;
+                        if (PathInfoCache.Contains(path))
+                        {
+                            return PathInfoCache.Get(path) as PathInfo;
+                        } else
+                        {
+                            return null;
+                        }
                     }
                 case 2:
                     {
@@ -122,8 +132,14 @@ namespace GithubProvider
                         catch (Octokit.NotFoundException)
                         {
                         }
-                        PathInfoCache.TryGetValue(path, out cached);
-                        return cached;
+                        if (PathInfoCache.Contains(path))
+                        {
+                            return PathInfoCache.Get(path) as PathInfo;
+                        }
+                        else
+                        {
+                            return null;
+                        }
                     }
                 default:
                     {
@@ -137,7 +153,7 @@ namespace GithubProvider
                             {
                                 foreach (var file in files.Tree)
                                 {
-                                    if (file.Path == filepath)
+                                    if (file.Path.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar) == filepath)
                                     {
                                         if (file.Type == TreeType.Blob)
                                         {
@@ -155,8 +171,14 @@ namespace GithubProvider
                         catch (Octokit.NotFoundException)
                         {
                         }
-                        PathInfoCache.TryGetValue(path, out cached);
-                        return cached;
+                        if (PathInfoCache.Contains(path))
+                        {
+                            return PathInfoCache.Get(path) as PathInfo;
+                        }
+                        else
+                        {
+                            return null;
+                        }
                     }
             }
         }
