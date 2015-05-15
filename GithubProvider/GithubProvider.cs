@@ -297,6 +297,10 @@ namespace GithubProvider
 
         protected override string GetChildName(string path)
         {
+            if (path.EndsWith(Path.DirectorySeparatorChar.ToString()))
+            {
+                path = path.TrimEnd(Path.DirectorySeparatorChar);
+            }
             return path.LastIndexOf(Path.DirectorySeparatorChar) >= 0 ?
                 path.Substring(path.LastIndexOf(Path.DirectorySeparatorChar) + 1) : path;
         }
@@ -311,6 +315,11 @@ namespace GithubProvider
                 {
                     return null;
                 }
+            }
+
+            if (path.EndsWith(Path.DirectorySeparatorChar.ToString()))
+            {
+                path = path.TrimEnd(Path.DirectorySeparatorChar);
             }
 
             var index = path.LastIndexOf(Path.DirectorySeparatorChar) >= 0 ? path.LastIndexOf(Path.DirectorySeparatorChar) : 0;
