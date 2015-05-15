@@ -39,18 +39,7 @@ namespace GithubProvider
 
         public virtual object AsObject()
         {
-            if (Type == PathType.File)
-            {
-                return new System.IO.FileInfo(VirtualPath); //These types seem to print right, it's odd.
-            }
-            else
-            {
-                if (string.IsNullOrEmpty(VirtualPath))
-                {
-                    return new System.IO.DirectoryInfo(Path.DirectorySeparatorChar.ToString());
-                }
-                return new System.IO.DirectoryInfo(VirtualPath);
-            }
+            return this;
         }
 
         public virtual string VirtualPath { get; protected set; }
