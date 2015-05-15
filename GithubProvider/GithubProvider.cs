@@ -258,7 +258,7 @@ namespace GithubProvider
                     RemoveItem(child.VirtualPath, recurse);
                 }
             }
-            if (item.Type == PathType.File)
+            if (item.Type == PathType.File || item.Type == PathType.Repo)
             {
                 ClearItem(path);
             }

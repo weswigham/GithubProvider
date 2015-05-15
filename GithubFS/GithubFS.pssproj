@@ -32,7 +32,10 @@
   <ItemGroup>
     <Compile Include="GithubFS.psd1" />
     <Compile Include="GithubFS.psm1" />
-    <Compile Include="GithubFS.test.ps1" />
+    <Compile Include="tests\GithubFS.test.ps1" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="tests\" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <Target Name="Build" />
