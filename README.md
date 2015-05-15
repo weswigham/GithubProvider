@@ -1,4 +1,4 @@
-# GithubProvider
+# GithubProvider [![Build status](https://ci.appveyor.com/api/projects/status/deuwe8iv0n67ufsb?svg=true)](https://ci.appveyor.com/project/weswigham/githubprovider)
 A provider for powershell which uses octokit to let you use github repos as a filesystem inside powershell
 
 ##Usage
