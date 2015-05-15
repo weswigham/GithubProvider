@@ -7,8 +7,9 @@ $workdir = "GH:\$testbotAccountName\$testbotRepo";
 Describe "GithubFS" {
 	Context "Integrating with cmdlets" {
 		It "Lets you use github as a browseable fs" {
-			cd $workdir;
+			pushd $workdir;
 			pwd | should be $workdir;
+			popd
 		}
 		
 		It "Lets you read the examine the existance of a file" {
