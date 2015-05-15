@@ -468,9 +468,9 @@ namespace GithubProvider
                 switch (item.Type)
                 {
                     case TreeType.Blob:
-                        return new FileInfo(Org, Repo, item.Path, item.Sha);
+                        return new FileInfo(Org, Repo, Path.Combine(FilePath, item.Path), item.Sha);
                     case TreeType.Tree:
-                        return new FolderInfo(Org, Repo, item.Path, item.Sha);
+                        return new FolderInfo(Org, Repo, Path.Combine(FilePath, item.Path), item.Sha);
                     default:
                         return null;
                 }
