@@ -10,5 +10,8 @@ install:
     - ps: (new-object Net.WebClient).DownloadString("http://psget.net/GetPsGet.ps1") | iex
     - ps: install-module pester
     
+before_build:
+  - nuget restore    
+    
 test_script:
     - ps: .\test.ps1
