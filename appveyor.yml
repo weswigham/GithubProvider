@@ -7,16 +7,18 @@ environment:
     secure: yljpqxZjLKG2ZxEbEN6u07UxOyDOGiAbIhA64CN9BVCoRPSzZTykdtQ9r/kAztJG
 
 install:
-    - ps: mkdir c:/Modules
-    - ps: $env:PSModulePath += ";c:\Modules\"
-    - ps: (new-object Net.WebClient).DownloadString("http://psget.net/GetPsGet.ps1") | iex
-    - ps: install-module pester
+  - ps: mkdir c:/Modules
+  - ps: $env:PSModulePath += ";c:\Modules\"
+  - ps: (new-object Net.WebClient).DownloadString("http://psget.net/GetPsGet.ps1") | iex
+  - ps: install-module pester
     
 before_build:
-  - nuget restore    
+  - ps: pushd GithubProvider
+  - ps: nuget restore
+  - ps: popd    
     
 test_script:
-    - ps: .\test.ps1
+  - ps: .\test.ps1
     
 deploy_script:
   - ps: cp GithubFS c:/Modules/GithubFS
