@@ -1,4 +1,4 @@
-build: on
+os: Visual Studio 2015 CTP
 
 environment:
   GITHUB_TOKEN:
@@ -7,6 +7,7 @@ environment:
     secure: yljpqxZjLKG2ZxEbEN6u07UxOyDOGiAbIhA64CN9BVCoRPSzZTykdtQ9r/kAztJG
 
 install:
+  - ps: $env:PATH=("C:\Program Files (x86)\MSBuild\14.0\Bin;"+$env:PATH)
   - ps: mkdir c:/Modules
   - ps: $env:PSModulePath += ";c:\Modules\"
   - ps: (new-object Net.WebClient).DownloadString("http://psget.net/GetPsGet.ps1") | iex
