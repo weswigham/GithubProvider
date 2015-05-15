@@ -1,0 +1,14 @@
+build: on
+
+environment:
+  GITHUB_TOKEN:
+    secure: PTJuUJLTdJTgSCatNWHnVejoZdTkrYBMLBe6UM46LXMy/sxk+KCLD9J6URu5q0JG
+
+install:
+	- ps: mkdir c:/Modules
+    - ps: $env:PSModulePath += ";c:\Modules\"
+    - ps: (new-object Net.WebClient).DownloadString("http://psget.net/GetPsGet.ps1") | iex
+    - ps: install-module pester
+    
+test_script:
+    - ps: .\test.ps1
