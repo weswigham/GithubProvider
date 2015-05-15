@@ -3,6 +3,8 @@ build: on
 environment:
   GITHUB_TOKEN:
     secure: PTJuUJLTdJTgSCatNWHnVejoZdTkrYBMLBe6UM46LXMy/sxk+KCLD9J6URu5q0JG
+  PSGALLERY_TOKEN:
+    secure: yljpqxZjLKG2ZxEbEN6u07UxOyDOGiAbIhA64CN9BVCoRPSzZTykdtQ9r/kAztJG
 
 install:
     - ps: mkdir c:/Modules
@@ -15,3 +17,10 @@ before_build:
     
 test_script:
     - ps: .\test.ps1
+    
+deploy_script:
+  - ps: cp GithubFS c:/Modules/GithubFS
+  - ps: publish-module -Name GithubFS -NugetApiToken $env:PSGALLERY_TOKEN
+    on:
+      branch: master
+      appveyor_repo_tag: true 
