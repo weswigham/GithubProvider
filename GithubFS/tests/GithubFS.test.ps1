@@ -16,7 +16,7 @@ Describe "GithubFS" {
 		}		
 		
 		It "Lets you read the contents of a file" {
-			cat "$workdir/README.md" | Should Contain "#scratch";
+			cat "$workdir/README.md" | Should Contain "# scratch";
 		}
 		
 		It "Enables redirection into the github fs to create or edit files" {
