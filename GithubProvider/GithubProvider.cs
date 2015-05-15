@@ -204,9 +204,9 @@ namespace GithubProvider
             {
                 if (await PathInfo.UncheckedRepoFromPath(Path.Combine(info.Org, info.Repo)).Exists())
                 {
-                    if (info.Sha != null)
+                    if (await info.Exists())
                     {
-                        throw new Exception("File already exists");
+                        throw new Exception("File already exists. (Did you try to pipe to new-item? Use set-content instead.)");
                     }
                     else
                     {
@@ -240,14 +240,17 @@ namespace GithubProvider
             if (item != null)
             {
                 PathInfo.PathInfoCache.Remove(GetParentPath(path, null)); //invalidate cache of parent object
-                WriteItemObject(item, path, /*???*/ false);
+                WriteItemObject(item, path, false);
             }
         }
 
         protected override void RemoveItem(string path, bool recurse)
         {
             var item = FileInfo.FromFSPath(path).Resolve();
-            if (item == null) return;
+            if (item == null || !item.Exists().Resolve())
+            {
+                throw new FileNotFoundException(string.Concat("File ", path, " does not exist."));
+            }
             if (recurse)
             {
                 foreach (var child in item.Children().Resolve())
@@ -255,7 +258,10 @@ namespace GithubProvider
                     RemoveItem(child.VirtualPath, recurse);
                 }
             }
-            ClearItem(path);
+            if (item.Type == PathType.File)
+            {
+                ClearItem(path);
+            }
         }
 
         protected override bool IsItemContainer(string path)
@@ -292,7 +298,7 @@ namespace GithubProvider
         protected override string GetChildName(string path)
         {
             return path.LastIndexOf(Path.DirectorySeparatorChar) >= 0 ?
-                path.Substring(path.LastIndexOf(Path.DirectorySeparatorChar) + 1) : path;
+                path.Substring(path.LastIndexOf(Path.DirectorySeparatorChar) + 1) : null;
         }
 
         protected static string StaticGetParentPath(string path, string root)
