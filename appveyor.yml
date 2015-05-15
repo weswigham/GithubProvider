@@ -10,8 +10,6 @@ install:
   - ps: $env:PATH=("C:\Program Files (x86)\MSBuild\14.0\Bin;"+$env:PATH)
   - ps: mkdir c:/Modules
   - ps: $env:PSModulePath += ";c:\Modules\"
-  - ps: (new-object Net.WebClient).DownloadString("http://psget.net/GetPsGet.ps1") | iex
-  - ps: install-module pester
     
 before_build:
   - ps: pushd GithubProvider
