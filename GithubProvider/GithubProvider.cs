@@ -298,7 +298,7 @@ namespace GithubProvider
         protected override string GetChildName(string path)
         {
             return path.LastIndexOf(Path.DirectorySeparatorChar) >= 0 ?
-                path.Substring(path.LastIndexOf(Path.DirectorySeparatorChar) + 1) : null;
+                path.Substring(path.LastIndexOf(Path.DirectorySeparatorChar) + 1) : path;
         }
 
         protected static string StaticGetParentPath(string path, string root)
