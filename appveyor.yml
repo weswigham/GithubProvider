@@ -5,6 +5,10 @@ environment:
     secure: PTJuUJLTdJTgSCatNWHnVejoZdTkrYBMLBe6UM46LXMy/sxk+KCLD9J6URu5q0JG
   PSGALLERY_TOKEN:
     secure: yljpqxZjLKG2ZxEbEN6u07UxOyDOGiAbIhA64CN9BVCoRPSzZTykdtQ9r/kAztJG
+    
+configuration:
+  - Debug
+  - Release    
 
 install:
   - ps: $env:PATH=("C:\Program Files (x86)\MSBuild\14.0\Bin;"+$env:PATH)
