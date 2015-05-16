@@ -2,7 +2,7 @@ ipmo "$PSScriptRoot/../GithubFS.psd1" -Force
 
 $testbotAccountName = 'repotestbot';
 $testbotRepo = 'scratch';
-$workdir = "GH:/$testbotAccountName/$testbotRepo";
+$workdir = "GH:\\$testbotAccountName\\$testbotRepo";
 
 Describe "GithubFS" {
 	Context "Integrating with cmdlets" {
@@ -13,29 +13,29 @@ Describe "GithubFS" {
 		}
 		
 		It "Lets you read the examine the existance of a file" {
-			test-path "$workdir/README.md" | Should Be $true;
+			test-path "$workdir\\README.md" | Should Be $true;
 		}		
 		
 		It "Lets you read the contents of a file" {
-			cat "$workdir/README.md" | Should Contain "# scratch";
+			cat "$workdir\\README.md" | Should Contain "# scratch";
 		}
 		
 		It "Enables redirection into the github fs to create or edit files" {
 			$testString = "This is a content pipe test";
-			echo $testString > "$workdir/test.txt";
-			cat "$workdir/test.txt" | Should Be $testString;
-			rm "$workdir/test.txt"
+			echo $testString > "$workdir\\test.txt";
+			cat "$workdir\\test.txt" | Should Be $testString;
+			rm "$workdir\\test.txt"
 		}
 		
 		It "Enables the creation or deletion of files in github" {
-			new-item -Type File -Path "$workdir/newitem.txt" -Value "content";
-			cat "$workdir/newitem.txt" | Should Be "content";
-			rm "$workdir/newitem.txt";
-			test-path "$workdir/newitem.txt" | Should Be $false;
+			new-item -Type File -Path "$workdir\\newitem.txt" -Value "content";
+			cat "$workdir\\newitem.txt" | Should Be "content";
+			rm "$workdir\\newitem.txt";
+			test-path "$workdir\\newitem.txt" | Should Be $false;
 		}
 		
 		It "Enables the creation or deletion of repos in github" {
-			$repo = "GH:/$testbotAccountName/scratch2";
+			$repo = "GH:\\$testbotAccountName\\scratch2";
 			mkdir $repo;
 			test-path $repo | Should Be $true;
 			rm $repo;
@@ -43,9 +43,9 @@ Describe "GithubFS" {
 		}
 		
 		It "Can make files with mkdir and remove folders" {
-			$directory = "$workdir/testfolder"; 
+			$directory = "$workdir\\testfolder"; 
 			mkdir $directory;
-			test-path "$directory/.gitkeep" | Should Be $true;
+			test-path "$directory\\.gitkeep" | Should Be $true;
 			rm $directory;
 			test-path $directory | Should Be $false;
 		}
@@ -53,7 +53,7 @@ Describe "GithubFS" {
 	
 	Context "Browsing github" {
 		It "can browse repos from orgs you're not a member of" {
-			ls "GH:/Microsoft" | Should Not BeNullOrEmpty
+			ls "GH:\\Microsoft" | Should Not BeNullOrEmpty
 		}
 	}
 }
