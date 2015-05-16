@@ -1,4 +1,4 @@
-ipmo ../../GithubFS -Force
+ipmo ../GithubFS.psd1 -Force
 
 $testbotAccountName = 'repotestbot';
 $testbotRepo = 'scratch';
