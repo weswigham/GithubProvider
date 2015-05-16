@@ -1,4 +1,4 @@
-ipmo ../GithubFS.psd1 -Force
+ipmo "$PSScriptRoot/../GithubFS.psd1" -Force
 
 $testbotAccountName = 'repotestbot';
 $testbotRepo = 'scratch';
