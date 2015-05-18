@@ -2,7 +2,7 @@ ipmo ../../GithubFS -Force
 
 $testbotAccountName = 'repotestbot';
 $testbotRepo = 'scratch';
-$workdir = "GH:\$testbotAccountName\$testbotRepo";
+$workdir = "GH:/$testbotAccountName/$testbotRepo";
 
 Describe "GithubFS" {
 	Context "Integrating with cmdlets" {
@@ -13,7 +13,7 @@ Describe "GithubFS" {
 		}
 		
 		It "Lets you read the examine the existance of a file" {
-			item-exists "$workdir/README.md" | Should Be $true;
+			"$workdir/README.md" | Should Exist;
 		}		
 		
 		It "Lets you read the contents of a file" {
@@ -31,23 +31,23 @@ Describe "GithubFS" {
 			new-item -Type File -Path "$workdir/newitem.txt" -Value "content";
 			cat "$workdir/newitem.txt" | Should Be "content";
 			rm "$workdir/newitem.txt";
-			item-exists "$workdir/newitem.txt" | Should Be $false;
+			"$workdir/newitem.txt" | Should Not Exist;
 		}
 		
 		It "Enables the creation or deletion of repos in github" {
 			$repo = "GH:\$testbotAccountName\scratch2";
 			mkdir $repo;
-			item-exists $repo | Should Be $true;
+			$repo | Should Exist;
 			rm $repo;
-			item-exists $repo | Should Be $false;
+			$repo | Should Not Exist;
 		}
 		
 		It "Can make files with mkdir and remove folders" {
 			$directory = "$workdir/testfolder"; 
 			mkdir $directory;
-			item-exists "$directory/.gitkeep" | Should Be $true;
+			"$directory/.gitkeep" | Should Exist;
 			rm $directory;
-			item-exists $directory | Should Be $false;
+			$directory | Should Not Exist;
 		}
 	}
 	
