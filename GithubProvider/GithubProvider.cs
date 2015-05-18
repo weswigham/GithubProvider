@@ -159,17 +159,18 @@ namespace GithubProvider
                         case (PathType.User):
                             {
                                 await Static.Client.Repository.Create(repo);
+                                PathInfo.PathInfoCache.Remove(parentInfo.VirtualPath);
                                 return repoInfo;
                             }
                         case (PathType.Org):
                             {
                                 await Static.Client.Repository.Create(repoInfo.Org, repo);
+                                PathInfo.PathInfoCache.Remove(parentInfo.VirtualPath);
                                 return repoInfo;
                             }
                         default:
                             throw new Exception("Given path is neither a repository nor a folder and cannot be created."); //TODO
                     }
-                    PathInfo.PathInfoCache.Remove(parentInfo.VirtualPath);
                 }
 
             }
