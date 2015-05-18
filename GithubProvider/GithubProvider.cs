@@ -15,27 +15,6 @@ namespace GithubProvider
     [CmdletProvider("Github", ProviderCapabilities.None)]
     public class GithubProvider : NavigationCmdletProvider, IContentCmdletProvider
     {
-        private static GitHubClient _client;
-        private static GitHubClient makeClient()
-        {
-            var connection = new Connection(
-                new ProductHeaderValue("GithubPSProvider", "0.0.1"),
-                GitHubClient.GitHubApiUrl,
-                new InMemoryCredentialStore(new Credentials(Environment.GetEnvironmentVariable("GITHUB_TOKEN"))),
-                new CachingHttpClient(new HttpClientAdapter(), new NaiveInMemoryCache()),
-                new SimpleJsonSerializer());
-            var client = new GitHubClient(connection);
-            return client;
-        }
-        public static GitHubClient Client
-        {
-            get
-            {
-                _client = _client ?? (_client = makeClient());
-                return _client;
-            }
-        }
-
         public void ClearContent(string path)
         {
             return; //noop
@@ -52,7 +31,7 @@ namespace GithubProvider
             if (info.Type == PathType.File)
             {
                 var fileInfo = info as FileInfo;
-                var content = Client.Repository.Content.GetAllContents(fileInfo.Org, fileInfo.Repo, fileInfo.FilePath).Resolve().FirstOrDefault();
+                var content = Static.Client.Repository.Content.GetAllContents(fileInfo.Org, fileInfo.Repo, fileInfo.FilePath).Resolve().FirstOrDefault();
                 return new HttpFileReader(content.DownloadUrl);
             }
             return null;
@@ -74,14 +53,14 @@ namespace GithubProvider
                     {
                         if (await info.Exists())
                         {
-                            await GithubProvider.Client.Repository.Content.UpdateFile(
+                            await Static.Client.Repository.Content.UpdateFile(
                                 info.Org,
                                 info.Repo,
                                 info.FilePath,
                                 new UpdateFileRequest(string.Concat("Update ", info.Name), System.Text.Encoding.UTF8.GetString(data), info.Sha));
                         } else
                         {
-                            await GithubProvider.Client.Repository.Content.CreateFile(
+                            await Static.Client.Repository.Content.CreateFile(
                                 info.Org,
                                 info.Repo,
                                 info.FilePath,
@@ -131,7 +110,7 @@ namespace GithubProvider
             {
                 var file = item as FilesystemInfo;
                 try {
-                    GithubProvider.Client.Repository.Content.DeleteFile(
+                    Static.Client.Repository.Content.DeleteFile(
                         file.Org,
                         file.Repo,
                         file.FilePath,
@@ -148,7 +127,7 @@ namespace GithubProvider
             {
                 var repo = item as RepoInfo;
                 try {
-                    GithubProvider.Client.Repository.Delete(repo.Org, repo.Name).Resolve();
+                    Static.Client.Repository.Delete(repo.Org, repo.Name).Resolve();
                 } catch (Octokit.NotFoundException)
                 {
                     throw new Exception("Repository not found on deletion - does your access token contain the repo_delete scope?");
@@ -179,12 +158,12 @@ namespace GithubProvider
                     {
                         case (PathType.User):
                             {
-                                await GithubProvider.Client.Repository.Create(repo);
+                                await Static.Client.Repository.Create(repo);
                                 return repoInfo;
                             }
                         case (PathType.Org):
                             {
-                                await GithubProvider.Client.Repository.Create(repoInfo.Org, repo);
+                                await Static.Client.Repository.Create(repoInfo.Org, repo);
                                 return repoInfo;
                             }
                         default:
@@ -202,7 +181,7 @@ namespace GithubProvider
 
             try
             {
-                await GithubProvider.Client.Repository.Content.CreateFile(
+                await Static.Client.Repository.Content.CreateFile(
                     folder.Org,
                     folder.Repo,
                     Path.Combine(folder.FilePath, ".gitkeep"),
@@ -229,7 +208,7 @@ namespace GithubProvider
                     }
                     else
                     {
-                        await GithubProvider.Client.Repository.Content.CreateFile(
+                        await Static.Client.Repository.Content.CreateFile(
                             info.Org,
                             info.Repo,
                             info.FilePath,

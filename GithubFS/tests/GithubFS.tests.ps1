@@ -1,7 +1,7 @@
 ipmo "$PSScriptRoot/../GithubFS.psd1" -Force
 
 $pathchar = [IO.Path]::DirectorySeparatorChar;
-$testbotAccountName = 'repotestbot';
+$testbotAccountName = $(Get-GithubUser).Login;
 $testbotRepo = 'scratch';
 $workdir = "GH:$pathchar$testbotAccountName$pathchar$testbotRepo";
 $readme = 'README.md';

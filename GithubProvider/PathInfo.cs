@@ -198,9 +198,9 @@ namespace GithubProvider
 
         public override async Task<IEnumerable<PathInfo>> Children()
         {
-            var user = await GithubProvider.Client.User.Current();
+            var user = await Static.Client.User.Current();
             var username = user.Login;
-            var orgs = await GithubProvider.Client.Organization.GetAllForCurrent();
+            var orgs = await Static.Client.Organization.GetAllForCurrent();
             var orgInfos = orgs.Select((org) => new OrgInfo(org.Login));
             var items = orgInfos.Concat(new List<PathInfo>() { new UserInfo(username) });
             foreach (var item in items)
@@ -230,7 +230,7 @@ namespace GithubProvider
 
         public override async Task<IEnumerable<PathInfo>> Children()
         {
-            var repos = await GithubProvider.Client.Repository.GetAllForUser(Name);
+            var repos = await Static.Client.Repository.GetAllForUser(Name);
             var items = repos.Select((repo) => new RepoInfo(Name, repo.Name));
             foreach (var item in items)
             {
@@ -243,7 +243,7 @@ namespace GithubProvider
         {
             try
             {
-                var user = await GithubProvider.Client.User.Get(Name);
+                var user = await Static.Client.User.Get(Name);
                 if (user != null)
                 {
                     PathInfoCache[Name] = this;
@@ -266,7 +266,7 @@ namespace GithubProvider
 
         public override async Task<IEnumerable<PathInfo>> Children()
         {
-            var repos = await GithubProvider.Client.Repository.GetAllForOrg(Name);
+            var repos = await Static.Client.Repository.GetAllForOrg(Name);
             var items = repos.Select((repo) => new RepoInfo(Name, repo.Name));
             foreach (var item in items)
             {
@@ -279,7 +279,7 @@ namespace GithubProvider
         {
             try
             {
-                var org = await GithubProvider.Client.Organization.Get(Name);
+                var org = await Static.Client.Organization.Get(Name);
                 if (org != null)
                 {
                     PathInfoCache[Name] = this;
@@ -315,10 +315,10 @@ namespace GithubProvider
 
         public override async Task<IEnumerable<PathInfo>> Children()
         {
-            var repo = await GithubProvider.Client.Repository.Get(Org, Name);
+            var repo = await Static.Client.Repository.Get(Org, Name);
             Branch defaultBranch;
             try {
-                defaultBranch = await GithubProvider.Client.Repository.GetBranch(Org, Name, repo.DefaultBranch);
+                defaultBranch = await Static.Client.Repository.GetBranch(Org, Name, repo.DefaultBranch);
             } catch (Octokit.NotFoundException)
             { //Empty uninitialized repo
                 return new List<PathInfo>();
@@ -327,7 +327,7 @@ namespace GithubProvider
             TreeResponse tree;
             try
             {
-                tree = await GithubProvider.Client.GitDatabase.Tree.Get(Org, Name, defaultBranch.Commit.Sha);
+                tree = await Static.Client.GitDatabase.Tree.Get(Org, Name, defaultBranch.Commit.Sha);
             } catch (Octokit.NotFoundException)
             { //Repo with all files removed
                 return new List<PathInfo>();
@@ -359,7 +359,7 @@ namespace GithubProvider
         {
             try
             {
-                var repo = await GithubProvider.Client.Repository.Get(Org, Name);
+                var repo = await Static.Client.Repository.Get(Org, Name);
                 if (repo != null)
                 {
                     PathInfoCache[VirtualPath] = this;
@@ -407,19 +407,19 @@ namespace GithubProvider
                 {
                     if (Type == PathType.Folder)
                     {
-                        return await GithubProvider.Client.GitDatabase.Tree.Get(Org, Repo, Sha) != null;
+                        return await Static.Client.GitDatabase.Tree.Get(Org, Repo, Sha) != null;
                     }
                     else
                     {
-                        return await GithubProvider.Client.GitDatabase.Blob.Get(Org, Repo, Sha) != null;
+                        return await Static.Client.GitDatabase.Blob.Get(Org, Repo, Sha) != null;
                     }
                 }
 
                 //Otherwise lookup the sha
-                var repo = await GithubProvider.Client.Repository.Get(Org, Repo);
-                var defaultBranch = await GithubProvider.Client.Repository.GetBranch(Org, Repo, repo.DefaultBranch);
+                var repo = await Static.Client.Repository.Get(Org, Repo);
+                var defaultBranch = await Static.Client.Repository.GetBranch(Org, Repo, repo.DefaultBranch);
                 var filepath = FilePath;
-                var files = await GithubProvider.Client.GitDatabase.Tree.GetRecursive(Org, Repo, defaultBranch.Commit.Sha);
+                var files = await Static.Client.GitDatabase.Tree.GetRecursive(Org, Repo, defaultBranch.Commit.Sha);
                 if (files.Tree.Count > 0)
                 {
                     foreach (var file in files.Tree)
@@ -454,7 +454,7 @@ namespace GithubProvider
 
         public override async Task<IEnumerable<PathInfo>> Children()
         {
-            var tree = await GithubProvider.Client.GitDatabase.Tree.Get(Org, Repo, Sha);
+            var tree = await Static.Client.GitDatabase.Tree.Get(Org, Repo, Sha);
             if (tree.Truncated)
             {
                 throw new Exception("Repo too big.");

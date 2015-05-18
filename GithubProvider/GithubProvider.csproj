@@ -53,6 +53,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Cmdlets\GetGithubUserCmdlet.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="GithubDriveInfo.cs" />
     <Compile Include="GithubProvider.cs" />
@@ -60,6 +61,7 @@
     <Compile Include="HttpFileWriter.cs" />
     <Compile Include="PathInfo.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Static\GithubClient.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
