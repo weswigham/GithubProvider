@@ -324,7 +324,14 @@ namespace GithubProvider
                 return new List<PathInfo>();
             }
 
-            var tree = await GithubProvider.Client.GitDatabase.Tree.Get(Org, Name, defaultBranch.Commit.Sha);
+            TreeResponse tree;
+            try
+            {
+                tree = await GithubProvider.Client.GitDatabase.Tree.Get(Org, Name, defaultBranch.Commit.Sha);
+            } catch (Octokit.NotFoundException)
+            { //Repo with all files removed
+                return new List<PathInfo>();
+            }
             if (tree.Truncated)
             {
                 throw new Exception("Repo too big.");

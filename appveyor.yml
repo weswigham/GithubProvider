@@ -2,15 +2,19 @@ os: Visual Studio 2015 RC
 
 environment:
   GITHUB_TOKEN:
-    secure: PTJuUJLTdJTgSCatNWHnVejoZdTkrYBMLBe6UM46LXMy/sxk+KCLD9J6URu5q0JG
+    secure: XHO7MYVx17hrAWLVGs1eGJZcIRczb4ddHrFZj/Be3mVO54ITNLpXR5uquH/9MqAl
   PSGALLERY_TOKEN:
     secure: yljpqxZjLKG2ZxEbEN6u07UxOyDOGiAbIhA64CN9BVCoRPSzZTykdtQ9r/kAztJG
+    
+configuration:
+  - Debug
+  - Release    
 
 install:
   - ps: $env:PATH=("C:\Program Files (x86)\MSBuild\14.0\Bin;"+$env:PATH)
   - ps: mkdir c:/Modules
   - ps: $env:PSModulePath += ";c:\Modules\"
-  - ps: cinst pester
+  - ps: cinst pester -y
     
 before_build:
   - ps: pushd GithubProvider

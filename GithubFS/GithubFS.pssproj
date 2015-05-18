@@ -32,7 +32,7 @@
   <ItemGroup>
     <Compile Include="GithubFS.psd1" />
     <Compile Include="GithubFS.psm1" />
-    <Compile Include="tests\GithubFS.test.ps1" />
+    <Compile Include="tests\GithubFS.tests.ps1" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="tests\" />

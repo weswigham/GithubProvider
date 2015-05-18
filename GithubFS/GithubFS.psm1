@@ -41,11 +41,11 @@ function Out-Github {
 	{
 		[object[]] $data = @();
 		$github = $false
-		if ( $(get-item $FilePath.Substring(0,$FilePath.LastIndexOf(':')+1)).PSProvider.Name -eq 'Github' ) {
-			$github = $true;
-		} else {
-		
-			try {
+
+		try {		
+			if ( $(get-item $FilePath.Substring(0,$FilePath.LastIndexOf(':')+1)).PSProvider.Name -eq 'Github' ) {
+				$github = $true;
+			} else {	
 				$outBuffer = $null
 				if ($PSBoundParameters.TryGetValue('OutBuffer', [ref]$outBuffer))
 				{
@@ -55,35 +55,35 @@ function Out-Github {
 				$scriptCmd = {& $wrappedCmd @PSBoundParameters }
 				$steppablePipeline = $scriptCmd.GetSteppablePipeline($myInvocation.CommandOrigin)
 				$steppablePipeline.Begin($PSCmdlet)
-			} catch {
-				throw
 			}
+		} catch {
+			throw
 		}
 	}
 	
 	process
 	{
-		if ($github -eq $true) {
-			$data += $_
-		} else {
-			try {
+		try {
+			if ($github -eq $true) {
+				$data += $_
+			} else {
 				$steppablePipeline.Process($_)
-			} catch {
-				throw
 			}
+		} catch {
+			throw
 		}
 	}
 
 	end
 	{
-		if ($github -eq $true) {
-			Set-Content $FilePath $data
-		} else {
-			try {
+		try {
+			if ($github -eq $true) {
+				Set-Content $FilePath $data
+			} else {
 				$steppablePipeline.End()
-			} catch {
-				throw
 			}
+		} catch {
+			throw
 		}
 	}
 	<#
@@ -94,4 +94,4 @@ function Out-Github {
 	#>
 }
 
-New-Alias -Name 'Out-File' -Value 'Out-Github' -Scope Global
+New-Alias -Name 'Out-File' -Value 'Out-Github' -Scope Global -Force

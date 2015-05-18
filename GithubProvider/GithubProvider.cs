@@ -88,6 +88,7 @@ namespace GithubProvider
                                 new CreateFileRequest(string.Concat("Add ", info.Name), System.Text.Encoding.UTF8.GetString(data)));
 
                         }
+                        PathInfo.PathInfoCache.Remove(info.VirtualPath);
                         PathInfo.PathInfoCache.Remove(GetParentPath(path, null));
                     });
                     return writer;
@@ -122,21 +123,38 @@ namespace GithubProvider
         protected override void ClearItem(string path)
         {
             var item = FileInfo.FromFSPath(path).Resolve();
+            if (item == null)
+            {
+                return; //Item already does not exist
+            }
             if (item.Type == PathType.File || item.Type == PathType.Folder)
             {
                 var file = item as FilesystemInfo;
-                GithubProvider.Client.Repository.Content.DeleteFile(
-                    file.Org,
-                    file.Repo,
-                    file.FilePath,
-                    new DeleteFileRequest(string.Concat("Delete ", file.Name), file.Sha)
-                ).Resolve();
+                try {
+                    GithubProvider.Client.Repository.Content.DeleteFile(
+                        file.Org,
+                        file.Repo,
+                        file.FilePath,
+                        new DeleteFileRequest(string.Concat("Delete ", file.Name), file.Sha)
+                    ).Resolve();
+                    PathInfo.PathInfoCache.Remove(file.VirtualPath);
+                    PathInfo.PathInfoCache.Remove(GetParentPath(file.VirtualPath, null)); //Invalidate parent
+                } catch (Octokit.NotFoundException)
+                {
+                    throw new Exception(string.Concat("Couldn't find to delete ", file.VirtualPath));
+                }
             }
             else if (item.Type == PathType.Repo)
             {
                 var repo = item as RepoInfo;
-                GithubProvider.Client.Repository.Delete(repo.Org, repo.Name).Resolve();
+                try {
+                    GithubProvider.Client.Repository.Delete(repo.Org, repo.Name).Resolve();
+                } catch (Octokit.NotFoundException)
+                {
+                    throw new Exception("Repository not found on deletion - does your access token contain the repo_delete scope?");
+                }
             }
+            PathInfo.PathInfoCache.Remove(item.VirtualPath);
         }
 
         private static async Task<object> directoryDelegate(string path, object input)
@@ -172,6 +190,7 @@ namespace GithubProvider
                         default:
                             throw new Exception("Given path is neither a repository nor a folder and cannot be created."); //TODO
                     }
+                    PathInfo.PathInfoCache.Remove(parentInfo.VirtualPath);
                 }
 
             }
@@ -215,6 +234,7 @@ namespace GithubProvider
                             info.Repo,
                             info.FilePath,
                             new CreateFileRequest(string.Concat("Add ", info.Name), input.ToString()));
+                        PathInfo.PathInfoCache.Remove(info.VirtualPath);
                         return info;
                     }
                 }
@@ -249,7 +269,7 @@ namespace GithubProvider
             var item = FileInfo.FromFSPath(path).Resolve();
             if (item == null || !item.Exists().Resolve())
             {
-                throw new FileNotFoundException(string.Concat("File ", path, " does not exist."));
+                throw new FileNotFoundException(string.Concat(path, " does not exist."));
             }
             if (recurse)
             {
