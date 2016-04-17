@@ -14,10 +14,9 @@ install:
   - ps: $env:PATH=("C:\Program Files (x86)\MSBuild\14.0\Bin;"+$env:PATH)
   - ps: mkdir c:/Modules
   - ps: $env:PSModulePath += ";c:\Modules\"
-  - ps: $msiPath = "$($env:USERPROFILE)\PackageManagement_x64.msi"
-  - ps: (New-Object Net.WebClient).DownloadFile('https://download.microsoft.com/download/4/1/A/41A369FA-AA36-4EE9-845B-20BCC1691FC5/PackageManagement_x64.msi', $msiPath)
-  - ps: cmd /c start /wait msiexec /i $msiPath /quiet
-  - ps: Install-Module -Name Pester
+  - ps: (new-object Net.WebClient).DownloadString("http://psget.net/GetPsGet.ps1") | iex
+  - ps: Import-Module PsGet
+  - ps: Install-Module Pester
     
 before_build:
   - ps: pushd GithubProvider
