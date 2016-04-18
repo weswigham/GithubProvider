@@ -20,7 +20,7 @@ namespace GithubProvider
             var token = Environment.GetEnvironmentVariable("GITHUB_TOKEN");
             if (string.IsNullOrWhiteSpace(token))
             {
-                return new GitHubClient(new Connection(header, new CachingHttpClient(new HttpClientAdapter(), new NaiveInMemoryCache())));
+                return new GitHubClient(new Connection(header, new CachingHttpClient(new HttpClientAdapter(HttpMessageHandlerFactory.CreateDefault), new NaiveInMemoryCache())));
             }
             else
             {
@@ -28,7 +28,7 @@ namespace GithubProvider
                     header,
                     GitHubClient.GitHubApiUrl,
                     new InMemoryCredentialStore(new Credentials(token)),
-                    new CachingHttpClient(new HttpClientAdapter(), new NaiveInMemoryCache()),
+                    new CachingHttpClient(new HttpClientAdapter(HttpMessageHandlerFactory.CreateDefault), new NaiveInMemoryCache()),
                     new SimpleJsonSerializer());
                 var client = new GitHubClient(connection);
                 return client;

@@ -29,13 +29,31 @@ namespace GithubProvider
         public IContentReader GetContentReader(string path)
         {
             var info = PathInfo.FromFSPath(path).Resolve();
-            if (info.Type == PathType.File)
+            if (info.Type != PathType.File)
             {
-                var fileInfo = info as FileInfo;
-                var content = Static.Client.Repository.Content.GetAllContents(fileInfo.Org, fileInfo.Repo, fileInfo.FilePath).Resolve().FirstOrDefault();
-                return new HttpFileReader(content.DownloadUrl);
+                return null;
             }
-            return null;
+            var fileInfo = info as FileInfo;
+
+            System.Text.Encoding encoding = null;
+            FileSystemCmdletProviderEncoding codingEnum = 0;
+            string delimiter = null;
+            if (DynamicParameters != null)
+            {
+                FileSystemContentReaderDynamicParameters dynamicParameters = this.DynamicParameters as FileSystemContentReaderDynamicParameters;
+                if (dynamicParameters != null)
+                {
+                    if (dynamicParameters.DelimiterSpecified)
+                    {
+                        delimiter = dynamicParameters.Delimiter;
+                    }
+                    encoding = dynamicParameters.EncodingType;
+                    codingEnum = dynamicParameters.Encoding;
+                }
+            }
+
+            var data = Static.Client.Repository.Content.GetAllContents(fileInfo.Org, fileInfo.Repo, fileInfo.FilePath).Resolve();
+            return new RepositoryContentReader(data, delimiter, codingEnum, encoding);
         }
 
         public object GetContentReaderDynamicParameters(string path)

@@ -28,7 +28,28 @@ Describe "GithubFS" {
         It "Lets you read the contents of a file" {
             "$workdir$pathchar$readme" | Should Contain "# $testbotRepo";
         }
+
+        It "Lets you read the contents of a file with differing encodings" {
+            $testStr = "# $testbotRepo";
+            gc "$workdir$pathchar$readme" | Should Be $testStr;
+            gc "$workdir$pathchar$readme" -Encoding UTF8 | Should Be $testStr;
+            gc "$workdir$pathchar$readme" -Encoding ASCII | Should Be $testStr;
+            gc "$workdir$pathchar$readme" -Encoding Unicode | Should Be $testStr;
+            gc "$workdir$pathchar$readme" -Encoding UTF7 | Should Be $testStr;
+            gc "$workdir$pathchar$readme" -Encoding UTF32 | Should Be $testStr;
+            gc "$workdir$pathchar$readme" -Encoding Default | Should Be $testStr;
+            gc "$workdir$pathchar$readme" -Encoding Oem | Should Be $testStr;
+            gc "$workdir$pathchar$readme" -Encoding BigEndianUTF32 | Should Be $testStr;
+            gc "$workdir$pathchar$readme" -Encoding String | Should Be $testStr;
+            $enc = [system.Text.Encoding]::UTF8;
+            gc "$workdir$pathchar$readme" -Encoding Byte | Should Be $enc.GetBytes($testStr);
+        }
         
+        It "Lets you specify a non-newline delimiter" {
+            $testStr = "# $testbotRepo".Split(" ");
+            gc "$workdir$pathchar$readme" -Delimiter " " | Should Be $testStr;
+        }
+
         if ($readonlyTests -eq $false) {
             It "Enables redirection into the github fs to create or edit files" {
                 $testString = @"

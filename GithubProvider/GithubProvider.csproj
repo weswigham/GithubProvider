@@ -30,8 +30,8 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Octokit, Version=0.11.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>packages\Octokit.0.11.0\lib\net45\Octokit.dll</HintPath>
+    <Reference Include="Octokit, Version=0.19.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>packages\Octokit.0.19.0\lib\net45\Octokit.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Octokit.Caching, Version=1.0.6.0, Culture=neutral, processorArchitecture=MSIL">
@@ -58,7 +58,7 @@
     <Compile Include="Extensions.cs" />
     <Compile Include="GithubDriveInfo.cs" />
     <Compile Include="GithubProvider.cs" />
-    <Compile Include="HttpFileReader.cs" />
+    <Compile Include="RepositoryContentReader.cs" />
     <Compile Include="HttpFileWriter.cs" />
     <Compile Include="PathInfo.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

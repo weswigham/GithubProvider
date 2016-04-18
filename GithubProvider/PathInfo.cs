@@ -327,7 +327,7 @@ namespace GithubProvider
             TreeResponse tree;
             try
             {
-                tree = await Static.Client.GitDatabase.Tree.Get(Org, Name, defaultBranch.Commit.Sha);
+                tree = await Static.Client.Git.Tree.Get(Org, Name, defaultBranch.Commit.Sha);
             } catch (Octokit.NotFoundException)
             { //Repo with all files removed
                 return new List<PathInfo>();
@@ -407,11 +407,11 @@ namespace GithubProvider
                 {
                     if (Type == PathType.Folder)
                     {
-                        return await Static.Client.GitDatabase.Tree.Get(Org, Repo, Sha) != null;
+                        return await Static.Client.Git.Tree.Get(Org, Repo, Sha) != null;
                     }
                     else
                     {
-                        return await Static.Client.GitDatabase.Blob.Get(Org, Repo, Sha) != null;
+                        return await Static.Client.Git.Blob.Get(Org, Repo, Sha) != null;
                     }
                 }
 
@@ -419,7 +419,7 @@ namespace GithubProvider
                 var repo = await Static.Client.Repository.Get(Org, Repo);
                 var defaultBranch = await Static.Client.Repository.GetBranch(Org, Repo, repo.DefaultBranch);
                 var filepath = FilePath;
-                var files = await Static.Client.GitDatabase.Tree.GetRecursive(Org, Repo, defaultBranch.Commit.Sha);
+                var files = await Static.Client.Git.Tree.GetRecursive(Org, Repo, defaultBranch.Commit.Sha);
                 if (files.Tree.Count > 0)
                 {
                     foreach (var file in files.Tree)
@@ -454,7 +454,7 @@ namespace GithubProvider
 
         public override async Task<IEnumerable<PathInfo>> Children()
         {
-            var tree = await Static.Client.GitDatabase.Tree.Get(Org, Repo, Sha);
+            var tree = await Static.Client.Git.Tree.Get(Org, Repo, Sha);
             if (tree.Truncated)
             {
                 throw new Exception("Repo too big.");
