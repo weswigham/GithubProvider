@@ -1,4 +1,4 @@
-os: Unstable
+os: WMF 5
 
 environment:
   GITHUB_TOKEN:
@@ -15,6 +15,7 @@ install:
   - ps: mkdir c:/Modules
   - ps: $env:PSModulePath += ";c:\Modules\"
   - ps: cinst pester -y
+  - ps: Get-PackageProvider -Name NuGet -Force
     
 before_build:
   - ps: pushd GithubProvider
@@ -25,8 +26,4 @@ test_script:
   - ps: .\test.ps1
     
 deploy_script:
-  - ps: cp GithubFS c:/Modules/GithubFS
-  - ps: publish-module -Name GithubFS -NugetApiToken $env:PSGALLERY_TOKEN
-    on:
-      branch: master
-      appveyor_repo_tag: true 
+  - ps: "if ($env:APPVEYOR_REPO_TAG -eq 'true') { cp GithubFS c:/Modules/GithubFS; publish-module -Name GithubFS -NugetApiToken $env:PSGALLERY_TOKEN }"
