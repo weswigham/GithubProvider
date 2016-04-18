@@ -39,6 +39,8 @@ pipe test
                 $filepath = "$workdir$pathchar$filename";
                 rm $filepath -Force -Recurse -ErrorAction SilentlyContinue
                 $testString | out-github $filepath
+                # Add a delay
+                sleep -m 200 # 200ms should be enough?
                 $filepath | Should Exist;
                 $content = cat $filepath;
                 $content | Should Be "$testString`n"; #Pipe adds a newline to the end
@@ -83,5 +85,22 @@ pipe test
             $ms = 'Microsoft';
             ls "GH:$pathchar$ms" | Should Not BeNullOrEmpty
         }
+    }
+}
+
+Describe "The Get-ProviderForUnresolvedPath Cmdlet" {
+    It "Can retrieve the provider for any arbitrary path" {
+        $ghProvider = Get-PSProvider Github
+        $fsProvider = Get-PSProvider FileSystem
+        $aliasProvider = Get-PSProvider Alias
+        Get-ProviderForUnresolvedPath "GH:/foobar/baz/buz.wot" | Should Be $ghProvider
+        Get-ProviderForUnresolvedPath "C:/foobar/baz/buz.wot" | Should Be $fsProvider
+        Get-ProviderForUnresolvedPath "Alias::out-github" | Should Be $aliasProvider
+
+        pushd $workdir
+        Get-ProviderForUnresolvedPath "./" | Should Be $ghProvider
+        Get-ProviderForUnresolvedPath "C:/foobar/baz/buz.wot" | Should Be $fsProvider
+        Get-ProviderForUnresolvedPath "Alias::out-github" | Should Be $aliasProvider
+        popd
     }
 }

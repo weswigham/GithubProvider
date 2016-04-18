@@ -93,4 +93,4 @@ function Out-Github {
 	#>
 }
 
-#New-Alias -Name 'Out-File' -Value 'Out-Github' -Scope Global -Force
+New-Alias -Name 'Out-File' -Value 'Out-Github' -Scope Global -Force
