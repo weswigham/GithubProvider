@@ -48,7 +48,7 @@ namespace GithubProvider
 
         private static int parsePathIntoParts(string path, out string[] parts)
         {
-            var sections = string.IsNullOrWhiteSpace(path) ? new string[] { } : path.Split(Path.DirectorySeparatorChar);
+            var sections = string.IsNullOrWhiteSpace(path) ? new string[] { } : path.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar).Split(Path.DirectorySeparatorChar);
             foreach (var elem in sections.Take(sections.Length - 1))
             {
                 if (string.IsNullOrWhiteSpace(elem))
