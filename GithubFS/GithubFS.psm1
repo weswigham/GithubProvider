@@ -44,7 +44,7 @@ function Out-Github {
 
 		try {
         		$full = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($FilePath)
-        		$driveRoots = Get-PSProvider GitHub | Select-Object -ExpandProperty drives | foreach-object { $_.root }
+        		$driveRoots = Get-PSProvider Github | Select-Object -ExpandProperty drives | foreach-object { $_.root }
         		foreach ($root in $driveRoots) {
             			if ($full.StartsWith($root)) {
                 			$github = true
