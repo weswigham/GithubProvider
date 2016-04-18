@@ -51,7 +51,7 @@ function Out-Github {
                 	break;
             	}
         	}
-			if (!$github) {	
+			if ($github -eq $false) {	
 				$outBuffer = $null
 				if ($PSBoundParameters.TryGetValue('OutBuffer', [ref]$outBuffer))
 				{
