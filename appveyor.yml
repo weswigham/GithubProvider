@@ -1,4 +1,4 @@
-os: Unstable
+os: WMF 5
 
 environment:
   GITHUB_TOKEN:
