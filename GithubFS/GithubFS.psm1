@@ -43,14 +43,14 @@ function Out-Github {
 		$github = $false
 
 		try {
-        		$full = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($FilePath)
-        		$driveRoots = Get-PSProvider Github | Select-Object -ExpandProperty drives | foreach-object { $_.Name }
-        		foreach ($root in $driveRoots) {
-            			if ($full.StartsWith($root)) {
-                			$github = true
-                			break
-            			}
-        		}
+        	$full = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($FilePath)
+        	$driveRoots = Get-PSProvider Github | Select-Object -ExpandProperty drives | foreach-object { $_.Name }
+        	foreach ($root in $driveRoots) {
+            	if ($full.StartsWith($root)) {
+                	$github = $true;
+                	break;
+            	}
+        	}
 			if (!$github) {	
 				$outBuffer = $null
 				if ($PSBoundParameters.TryGetValue('OutBuffer', [ref]$outBuffer))
