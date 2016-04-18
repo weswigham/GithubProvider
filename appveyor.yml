@@ -33,4 +33,4 @@ test_script:
   - ps: .\test.ps1
     
 deploy_script:
-  - ps: "if ($env:APPVEYOR_REPO_TAG -eq 'true') { cp GithubFS c:/Modules/GithubFS; publish-module -Name GithubFS -NugetApiToken $env:PSGALLERY_TOKEN }"
+  - ps: "if ($env:APPVEYOR_REPO_TAG -eq 'true') { cp GithubFS c:/Modules/GithubFS; publish-module -Name GithubFS -NuGetApiKey $env:PSGALLERY_TOKEN }"
