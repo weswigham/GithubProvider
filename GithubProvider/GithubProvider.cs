@@ -9,6 +9,7 @@ using System.Collections.ObjectModel;
 using Octokit.Internal;
 using Octokit.Caching;
 using System.Collections.Generic;
+using Microsoft.PowerShell.Commands;
 
 namespace GithubProvider
 {
@@ -39,7 +40,7 @@ namespace GithubProvider
 
         public object GetContentReaderDynamicParameters(string path)
         {
-            return null;
+            return new FileSystemContentReaderDynamicParameters();
         }
 
         public IContentWriter GetContentWriter(string path)
@@ -78,7 +79,7 @@ namespace GithubProvider
 
         public object GetContentWriterDynamicParameters(string path)
         {
-            return null;
+            return new FileSystemContentWriterDynamicParameters();
         }
 
         protected override bool IsValidPath(string path)
