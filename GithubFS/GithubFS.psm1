@@ -43,14 +43,7 @@ function Out-Github {
 		$github = $false
 
 		try {
-        	$full = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($FilePath)
-        	$driveRoots = Get-PSProvider Github | Select-Object -ExpandProperty drives | foreach-object { $_.Name }
-        	foreach ($root in $driveRoots) {
-            	if ($full.StartsWith($root)) {
-                	$github = $true;
-                	break;
-            	}
-        	}
+        	$github = $(Get-ProviderForUnresolvedPath $FilePath) -eq $(Get-PSProvider Github)
 			if ($github -eq $false) {	
 				$outBuffer = $null
 				if ($PSBoundParameters.TryGetValue('OutBuffer', [ref]$outBuffer))
@@ -100,4 +93,4 @@ function Out-Github {
 	#>
 }
 
-New-Alias -Name 'Out-File' -Value 'Out-Github' -Scope Global -Force
+#New-Alias -Name 'Out-File' -Value 'Out-Github' -Scope Global -Force
