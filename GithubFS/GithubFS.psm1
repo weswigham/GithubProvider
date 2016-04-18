@@ -42,10 +42,9 @@ function Out-Github {
 		[object[]] $data = @();
 		$github = $false
 
-		try {		
-			if ( $(get-item $FilePath.Substring(0,$FilePath.LastIndexOf(':')+1)).PSProvider.Name -eq 'Github' ) {
-				$github = $true;
-			} else {	
+		try {
+        	$github = $(Get-ProviderForUnresolvedPath $FilePath) -eq $(Get-PSProvider Github)
+			if ($github -eq $false) {	
 				$outBuffer = $null
 				if ($PSBoundParameters.TryGetValue('OutBuffer', [ref]$outBuffer))
 				{

@@ -54,6 +54,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Cmdlets\GetGithubUserCmdlet.cs" />
+    <Compile Include="Cmdlets\GetProviderForUnresolvedPathCmdlet.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="GithubDriveInfo.cs" />
     <Compile Include="GithubProvider.cs" />
