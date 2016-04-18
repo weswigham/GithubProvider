@@ -1,3 +1,5 @@
+os: Unstable
+
 environment:
   GITHUB_TOKEN:
     secure: XHO7MYVx17hrAWLVGs1eGJZcIRczb4ddHrFZj/Be3mVO54ITNLpXR5uquH/9MqAl
